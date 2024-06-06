@@ -1,15 +1,16 @@
 #include <iostream>
 #include <vector>
+#include <string>
+#include <random>
 #include <conio.h>
 #include <Windows.h>
-#include <random>
 using namespace std;
-#define GAME_VERSION "v0.1.1"
+#define GAME_VERSION "v0.1.2"
 #define GAME_MAKER   "AAA650@0x28ATeam"
 
 enum KeyDef { NONE, UP, DOWN, LEFT, RIGHT, KEYDEF_COUNT = 8 };
 enum ScreenSize { HEIGHT = 16, WIDTH = 16 };
-const int tps = 8;
+int tps = 8;
 int DelayTime = (int)(1000 / tps);
 
 struct vecd {
@@ -44,7 +45,7 @@ struct vecd {
 };
 
 int HeadDirection = 0;
-int SettingsMode = 0;
+int ConsoleMode = 0;
 const int KeyConfig[KEYDEF_COUNT * 2] = { 'w',UP,'s',DOWN,'a',LEFT,'d',RIGHT };
 int LastKey = NULL;
 vector<vecd> Snake(1,vecd(0,0));
@@ -83,6 +84,8 @@ int Input() {
 			HeadDirection = KeyConfig[i + 1];
 		i++;
 	};
+	if (InKey == '/')
+		ConsoleMode = true;
 	return InKey;
 };
 
@@ -113,7 +116,8 @@ int Move() {
 	Snake.insert(Snake.begin(), NextHead);
 	if (NextHead != Food) {
 		Snake.pop_back();
-		Score += (int)Snake.size();
+		if(HeadDirection!=0)
+			Score += (int)Snake.size();
 	}
 	else {
 		FoodEaten = true;
@@ -169,6 +173,41 @@ int Draw() {
 	return 0;
 };
 
+int Console() {
+	cout << "\033[" << HEIGHT + 3 << ";0HConsole Mode\nPls input command\n\033[?25h";
+	for (string cmd;;) {
+		cin >> cmd;
+		if (cmd == "help" || cmd == "Help")
+			cout << "See the Console() in main.cpp\n";
+		if (cmd == "Exit")
+			break;
+		if (cmd == "StopGame")
+			GameOver = true;
+		if (cmd == "ResetFood")
+			MakeFood();
+		if (cmd == "SetFoodPos") {
+			int x = 0, y = 0;
+			cin >> x >> y;
+			Food = vecd(x, y);
+		};
+		if (cmd == "SetScore") {
+			int num = 0;
+			cin >> num;
+			Score = num;
+		};
+		if (cmd == "ChangeGameRate") {
+			int num = 0;
+			cin >> num;
+			tps = num;
+			DelayTime = (int)(1000 / tps);
+		};
+	};
+	ConsoleMode = false;
+	system("cls");
+	cout << "\033[?25l";
+	return 0;
+};
+
 int main(int argc, char* argv[]) {
 	/*
 	//Get the handle of the default buffer
@@ -201,6 +240,8 @@ int main(int argc, char* argv[]) {
 		if (FoodEaten == true)
 			MakeFood();
 		Input();
+		if (ConsoleMode == true)
+			Console();
 		Move();
 		Draw();
 		if (GameOver == true)
