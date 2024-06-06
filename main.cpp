@@ -4,6 +4,9 @@
 #include <Windows.h>
 #include <random>
 using namespace std;
+#define GAME_VERSION "v0.1.1"
+#define GAME_MAKER   "AAA650@0x28ATeam"
+
 enum KeyDef { NONE, UP, DOWN, LEFT, RIGHT, KEYDEF_COUNT = 8 };
 enum ScreenSize { HEIGHT = 16, WIDTH = 16 };
 const int tps = 8;
@@ -49,12 +52,18 @@ vecd Food(0, 0);
 bool FoodEaten = true;
 bool GameOver = false;
 int Score = 0;
+int CutCount = 0;
 
 int MakeFood() {
+	REMAKE:
 	uniform_int_distribution<> distribx(0, WIDTH - 1), distriby(0, HEIGHT - 1);
 	random_device rdx, rdy;
 	mt19937 genx(rdx()), geny(rdy());
 	Food = vecd(distribx(genx), distriby(geny));
+	for (auto it = Snake.begin(); it != Snake.end(); it++) {
+		if (Food == *it)
+			goto REMAKE;
+	};
 	FoodEaten = false;
 	return 0;
 };
@@ -94,19 +103,21 @@ int Move() {
 		break;
 	};
 	if (NextHead.x >= WIDTH)
-		NextHead.x = NextHead.x - WIDTH;
+		NextHead.x -= WIDTH;
 	if (NextHead.y >= HEIGHT)
-		NextHead.y = NextHead.y - HEIGHT;
+		NextHead.y -= HEIGHT;
 	if (NextHead.x < 0)
-		NextHead.x = NextHead.x + WIDTH;
+		NextHead.x += WIDTH;
 	if (NextHead.y < 0)
-		NextHead.y = NextHead.y + HEIGHT;
+		NextHead.y += HEIGHT;
 	Snake.insert(Snake.begin(), NextHead);
 	if (NextHead != Food) {
 		Snake.pop_back();
+		Score += (int)Snake.size();
 	}
 	else {
 		FoodEaten = true;
+		Score += 500;
 	};
 	auto it = Snake.begin();
 	for (it++; it != Snake.end(); it++) {
@@ -136,6 +147,9 @@ int Draw() {
 		cout << "--";
 	};
 	cout << "+\n";
+	//Draw HUD
+	cout << "\033[1;" << WIDTH * 2 + 3 << "H LSS Game|"<<GAME_VERSION<<"|by:"<<GAME_MAKER;
+	cout << "\033[2;" << WIDTH * 2 + 3 << "H Score: " << Score;
 
 	auto it = Snake.begin();
 	vecd NowBody = *it;
@@ -144,7 +158,12 @@ int Draw() {
 		NowBody = *it;
 		cout << "\033[" << (NowBody.y + 2) << ";" << (NowBody.x * 2 + 2) << "H" << "\033[47m  \033[0m";
 	};
-	cout << "\033[" << (Food.y + 2) << ";" << (Food.x * 2 + 2) << "H" << "()";
+	if (FoodEaten == true) {
+		cout << "\033[" << (Food.y + 2) << ";" << (Food.x * 2 + 2) << "H\033[42m()\033[0m";
+	}
+	else {
+		cout << "\033[" << (Food.y + 2) << ";" << (Food.x * 2 + 2) << "H()";
+	};
 	
 
 	return 0;
@@ -192,6 +211,6 @@ int main(int argc, char* argv[]) {
 
 		Sleep(DelayTime);
 	};
-	cout << "\033[" << HEIGHT + 3 << ";0HGameOver";
-	return 0;
+	cout << "\033[" << HEIGHT + 3 << ";0HGameOver\nPress any key to exit";
+	return _getch();
 };
